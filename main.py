@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import requests
 
 
 def logger_one(old_function):
@@ -11,7 +12,7 @@ def logger_one(old_function):
         result = old_function(*args, **kwargs)
         return_value = f"return: {result}"
 
-        with open('main.log', 'a') as log_file:
+        with open('main.log', 'a', encoding='utf-8') as log_file:
             log_file.write(f"{current_time} - {function_name} - {arguments} - {return_value}\n")
 
         return result
@@ -33,7 +34,7 @@ def logger_two(path):
 
             log_entry = f"{current_datetime} - {function_name}({arguments}) - {result}\n"
 
-            with open(path, 'a') as log_file:
+            with open(path, 'a', encoding='utf-8') as log_file:
                 log_file.write(log_entry)
 
             return result
@@ -120,6 +121,23 @@ def test_2():
             assert str(item) in log_file_content, f'{item} должен быть записан в файл'
 
 
+@logger_one
+def search_superhero(url_super, *superheroes_search):
+    response_super = requests.get(url_super)
+    if 200 <= response_super.status_code <= 300:
+        data = response_super.json()
+        superheroes = []
+        for i in data:
+            if i['name'] in superheroes_search:
+                name_superheroes = i['name']
+                intelligence_superheroes = i['powerstats']['intelligence']
+                superheroes.append({'name': name_superheroes, 'intelligence': intelligence_superheroes})
+        superheroes_sorted = sorted(superheroes, key=lambda x: x['intelligence'], reverse=True)
+        return f"Самый умный супергерой: {superheroes_sorted[0]['name']}"
+
+
 if __name__ == '__main__':
     test_1()
     test_2()
+
+    search_superhero("https://akabab.github.io/superhero-api/api/all.json", "Hulk", "Captain America")

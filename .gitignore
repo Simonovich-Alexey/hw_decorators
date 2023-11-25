@@ -1,6 +1,5 @@
 .idea/
 venv/
-sourse/
 test.py
 .env
 log_1.log
