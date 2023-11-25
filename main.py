@@ -23,7 +23,7 @@ def logger_one(old_function):
 def logger_two(path):
     def logger(old_function):
         def new_function(*args, **kwargs):
-            current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            current_datetime = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
             function_name = old_function.__name__
 
             # Записываем аргументы, с которыми вызвалась функция
