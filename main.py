@@ -1,74 +1,125 @@
-import types
+import os
+from datetime import datetime
 
 
-# 3адание №1
-class FlatIterator:
-    def __init__(self, list_of_lists):
-        self.list_of_lists = list_of_lists
-        self.flat_list = [item for sublist in list_of_lists for item in sublist]
+def logger_one(old_function):
+    def new_function(*args, **kwargs):
+        current_time = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+        function_name = old_function.__name__
+        arguments = f"args: {args}, kwargs: {kwargs}"
 
-    def __iter__(self):
-        self.index = 0
-        return self
+        result = old_function(*args, **kwargs)
+        return_value = f"return: {result}"
 
-    def __next__(self):
-        if self.index < len(self.flat_list):
-            item = self.flat_list[self.index]
-            self.index += 1
-            return item
-        else:
-            raise StopIteration
+        with open('main.log', 'a') as log_file:
+            log_file.write(f"{current_time} - {function_name} - {arguments} - {return_value}\n")
+
+        return result
+
+    return new_function
+
+
+def logger_two(path):
+    def logger(old_function):
+        def new_function(*args, **kwargs):
+            current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            function_name = old_function.__name__
+
+            # Записываем аргументы, с которыми вызвалась функция
+            arguments = ", ".join([str(arg) for arg in args])
+            arguments += ", ".join([f", {value}" for value in kwargs.values()])
+
+            result = old_function(*args, **kwargs)
+
+            log_entry = f"{current_datetime} - {function_name}({arguments}) - {result}\n"
+
+            with open(path, 'a') as log_file:
+                log_file.write(log_entry)
+
+            return result
+
+        return new_function
+
+    return logger
 
 
 def test_1():
-    list_of_lists_1 = [
-        ['a', 'b', 'c'],
-        ['d', 'e', 'f', 'h', False],
-        [1, 2, None]
-    ]
-    for flat_iterator_item, check_item in zip(FlatIterator(list_of_lists_1),
-                                              ['a', 'b', 'c', 'd', 'e', 'f', 'h', False, 1, 2, None]):
-        assert flat_iterator_item == check_item
+    path = 'main.log'
+    if os.path.exists(path):
+        os.remove(path)
 
-    assert list(FlatIterator(list_of_lists_1)) == ['a', 'b', 'c', 'd', 'e', 'f', 'h', False, 1, 2, None]
+    @logger_one
+    def hello_world():
+        return 'Hello World'
 
+    @logger_one
+    def summator(a, b=0):
+        return a + b
 
-# Задание #2
-def flat_generator(list_of_lists):
-    for item in list_of_lists:
-        if isinstance(item, list):
-            yield from flat_generator(item)
-        else:
-            yield item
+    @logger_one
+    def div(a, b):
+        return a / b
+
+    assert 'Hello World' == hello_world(), "Функция возвращает 'Hello World'"
+    result = summator(2, 2)
+    assert isinstance(result, int), 'Должно вернуться целое число'
+    assert result == 4, '2 + 2 = 4'
+    result = div(6, 2)
+    assert result == 3, '6 / 2 = 3'
+
+    assert os.path.exists(path), 'файл main.log должен существовать'
+
+    summator(4.3, b=2.2)
+    summator(a=0, b=0)
+
+    with open(path) as log_file:
+        log_file_content = log_file.read()
+
+    assert 'summator' in log_file_content, 'должно записаться имя функции'
+    for item in (4.3, 2.2, 6.5):
+        assert str(item) in log_file_content, f'{item} должен быть записан в файл'
 
 
 def test_2():
-    list_of_lists_1 = [
-        ['a', 'b', 'c'],
-        ['d', 'e', 'f', 'h', False],
-        [1, 2, None]
-    ]
-    for flat_iterator_item, check_item in zip(flat_generator(list_of_lists_1),
-                                              ['a', 'b', 'c', 'd', 'e', 'f', 'h', False, 1, 2, None]):
-        assert flat_iterator_item == check_item
+    paths = ('log_1.log', 'log_2.log', 'log_3.log')
 
-    assert list(flat_generator(list_of_lists_1)) == ['a', 'b', 'c', 'd', 'e', 'f', 'h', False, 1, 2, None]
+    for path in paths:
+        if os.path.exists(path):
+            os.remove(path)
 
-    assert isinstance(flat_generator(list_of_lists_1), types.GeneratorType)
+        @logger_two(path)
+        def hello_world():
+            return 'Hello World'
+
+        @logger_two(path)
+        def summator(a, b=0):
+            return a + b
+
+        @logger_two(path)
+        def div(a, b):
+            return a / b
+
+        assert 'Hello World' == hello_world(), "Функция возвращает 'Hello World'"
+        result = summator(2, 2)
+        assert isinstance(result, int), 'Должно вернуться целое число'
+        assert result == 4, '2 + 2 = 4'
+        result = div(6, 2)
+        assert result == 3, '6 / 2 = 3'
+        summator(4.3, b=2.2)
+
+    for path in paths:
+
+        assert os.path.exists(path), f'файл {path} должен существовать'
+
+        with open(path) as log_file:
+            log_file_content = log_file.read()
+
+        assert 'summator' in log_file_content, 'должно записаться имя функции'
+
+        for item in (4.3, 2.2, 6.5):
+            assert str(item) in log_file_content, f'{item} должен быть записан в файл'
 
 
-if __name__ == "__main__":
-
-    list_of_lists_test = [
-        ['a', 'b', 'c'],
-        ['d', 'e', 'f', 'h', False],
-        [1, 2, None]
-    ]
-
-    result_1 = list(FlatIterator(list_of_lists_test))
-    print(result_1)
+if __name__ == '__main__':
     test_1()
-
-    result_2 = list(flat_generator(list_of_lists_test))
-    print(result_2)
     test_2()
